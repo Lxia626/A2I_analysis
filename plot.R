@@ -92,4 +92,11 @@ if (FUNCTION == "percent_single") {
     p.type_rep <- p.type + p.rep
     ggsave(outFile, p.type_rep, width=25, height=8)
 
+} else if (FUNCTION == 'depth') {
+    depth <- read.table(args[2], header=F, sep='\t') # counted output of samtool depth for single individual, cmd: awk '{print $NF}' ${depth_out} | sort -k1,1n | uniq -c | awk -v OFS='\t' '{print $2,$1}'
+    colnames(depth) <- c('count', 'depth')
+    p <- ggplot(depth, aes(x=depth, y=log10(count))) + geom_bar(stat='identity') + egg::theme_article() + 
+        scale_y_continuous(expand=c(0,0), limits=c(0, max(log10(depth$count)))) + 
+        theme(axis.text.x = element_text(size=20), axis.title.x = element_text(size=24), axis.text.y = element_text(size=20), axis.title.y = element_text(size=24))
+    ggsave('depth.pdf', p, width=10, height=6)
 }
