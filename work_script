@@ -5,15 +5,15 @@ samples=($(ls -F ./ | grep './' | grep ${prefix_sample} | sed 's/\///g'))
 samples=() # fill in the blank according to specific order
 
 for sample in ${samples[@]}; do
-    python3 ~/scripts/pipeline/A2I_editing_pipe/A2I_analysis.py -i ${sample}/${sample}_Alu.all_candsites --prefix ${sample}.Alu -R ~/../share/Databases/genomes/Hg19_reference/hg19_softmasked.fa --mis 3
+    python3 ~/scripts/pipeline/A2I_editing_pipe/A2I_analysis.py -i ${sample}/${sample}_Alu.all_candsites --prefix ${sample}.Alu -R ~/../share/Databases/genomes/Hg19_reference/hg19_softmasked.fa --mis 2
     weblogo -F pdf -f ${sample}.Alu.motif.seq -o ${sample}.Alu.motif.pdf --units probability -A dna
 
     awk -v OFS='\t' '{print $1, $2, $2+1}' ${sample}/${sample}_NoAlu.all_candsites | bedtools intersect -a - -b /public/home/Songlab/songyl/database/Repeat/human/human_nonAlu.bed | awk 'ARGIND==1{a[$1"\t"$2]=$0} ARGIND==2{if($1"\t"$2 in a){print $0}}' - ${sample}/${sample}_NoAlu.all_candsites > ${sample}/${sample}_NoAlu_rep.all_candsites
-    python3 ~/scripts/pipeline/A2I_editing_pipe/A2I_analysis.py -i ${sample}/${sample}_NoAlu_rep.all_candsites --prefix ${sample}.NoAlu_rep -R ~/../share/Databases/genomes/Hg19_reference/hg19_softmasked.fa --mis 3
+    python3 ~/scripts/pipeline/A2I_editing_pipe/A2I_analysis.py -i ${sample}/${sample}_NoAlu_rep.all_candsites --prefix ${sample}.NoAlu_rep -R ~/../share/Databases/genomes/Hg19_reference/hg19_softmasked.fa --mis 2
     #weblogo -F pdf -f ${sample}.NoAlu_rep.motif.seq -o ${sample}.NoAlu_rep.motif.pdf --units probability -A dna
 
     awk -v OFS='\t' '{print $1, $2, $2+1}' ${sample}/${sample}_NoAlu.all_candsites | bedtools intersect -a - -b /public/home/Songlab/songyl/database/Repeat/human/human_nonAlu.bed -v | awk 'ARGIND==1{a[$1"\t"$2]=$0} ARGIND==2{if($1"\t"$2 in a){print $0}}' - ${sample}/${sample}_NoAlu.all_candsites > ${sample}/${sample}other.all_candsites
-    python3 ~/scripts/pipeline/A2I_editing_pipe/A2I_analysis.py -i ${sample}/${sample}_other.all_candsites --prefix ${sample}.other -R ~/../share/Databases/genomes/Hg19_reference/hg19_softmasked.fa --mis 3
+    python3 ~/scripts/pipeline/A2I_editing_pipe/A2I_analysis.py -i ${sample}/${sample}_other.all_candsites --prefix ${sample}.other -R ~/../share/Databases/genomes/Hg19_reference/hg19_softmasked.fa --mis 2
     #weblogo -F pdf -f ${sample}.other.motif.seq -o ${sample}.other.motif.pdf --units probability -A dna
     
 done
@@ -21,17 +21,20 @@ done
 Rscript ~/scripts/pipeline/A2I_editing_pipe/plot.R percent_multiple $(IFS=,; echo "${samples[*]}") rep_combine.pdf
 
 ## accuracy summary
+if [[ -f accuracy.txt ]]; then
+    rm accuracy.txt
+fi
 edit_sites_known="/public/home/Songlab/share/Databases/editing_sites/Merged/hg19_all_Known_editing-sites" # all annotated editing sites
 for SAMPLE in ${samples[@]}; do
     cat ${SAMPLE}.Alu.filter.candsites ${SAMPLE}.NoAlu_rep.filter.candsites ${SAMPLE}.other.filter.candsites > ${SAMPLE}.all.filter.candsites
     accurate_num=`awk 'ARGIND==1{a[$1","$2]=$1","$2} ARGIND==2{if($1","$2 in a) {print $0}}' ${edit_sites_known} ${SAMPLE}.all.filter.candsites | wc -l`
 total=`wc -l ${SAMPLE}.all.filter.candsites | cut -d' ' -f1`
     ratio=`echo "scale=4; ${accurate_num}/${total}" | bc`
-    echo -e "${SAMPLE}: ${accurate_num}; TOTAL: ${total}; ACCURACY: ${ratio}"
 
     Alu_accurate_num=`awk 'ARGIND==1{a[$1","$2]=$1","$2} ARGIND==2{if($1","$2 in a) {print $0}}' ${edit_sites_known} ${SAMPLE}.Alu.filter.candsites | wc -l`
     total_alu=`wc -l ${SAMPLE}.Alu.filter.candsites | cut -d' ' -f1`
     ratio_alu=`echo "scale=4; ${Alu_accurate_num}/${total_alu}" | bc`
-    echo -e "${SAMPLE}_ALU: ${Alu_accurate_num}; TOTAL: ${total_alu}; ACCURACY: ${ratio_alu}"
+    
+    echo -e "${SAMPLE}\t${accurate_num}\t${total}\t${ratio}\t${Alu_accurate_num}\t${total_alu}\t${ratio_alu}" >> accuracy.txt
 done
 
