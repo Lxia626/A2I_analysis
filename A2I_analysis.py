@@ -10,7 +10,7 @@ def arg(argv):
 
     import argparse
     parser = argparse.ArgumentParser(description="Analysis using Python", formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('-i', '--input', help="Annotation file for filtered A2I sites", type=argparse.FileType('r'), required=True)
+    parser.add_argument('-i', '--input', help="Annotation file for filtered A2I sites [format: CHROM\tPOS\tREF_NUM,ALT_NUM\tREF\tALT\tRATIO\tSTRAND\tGENE_ID]", type=argparse.FileType('r'), required=True)
     parser.add_argument('--prefix', help="Prefix for output file", type=str)
     parser.add_argument('-R', help="Reference sequences", type=str, required=True)
     parser.add_argument('--depth', help="Threshold for depth [10, --EDITING_TYPE_COUNT]", type=int, default=10)
@@ -34,14 +34,16 @@ def main(inputFile, ref_in, prefix, depth=10, mismatch=2, no_annotation=False):
         edit_type_dict[i] = 0
 
     for line in inputFile:
+        if line.startswith('CHROM'): continue
         line_info = line.strip().split('\t')
+        #sys.stderr.write(line)
         ref_alt = (int(line_info[2].split(',')[0]), int(line_info[2].split(',')[1]))
         if ref_alt[1] < mismatch: continue
         if sum(ref_alt) < depth: continue
         ref = line_info[3].upper(); alt = line_info[4].upper(); edit_type = ref+'->'+alt
-        ref_alt_ratio = float(line_info[5])
+        #ref_alt_ratio = float(line_info[5])
         if not no_annotation: trans_anno = line_info[-3].split(','); strand_set = frozenset(line_info[-2].split(',')); gene_symbol_list = line_info[-1].split(',')
-        else: strand_set = line_info[6]
+        else: strand_set = frozenset(line_info[6].split(','))
 
         if len(strand_set) > 1: continue # exclude this site according to Song et al., 2020
 

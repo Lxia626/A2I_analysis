@@ -69,7 +69,7 @@ for key in ${a[@]}; do
     echo -e "/public/usr/bin/samtools mpileup -A -B -d 10000 -f $referencegenome -q 20 -Q 0 chr$key.filter.bam > $pilename;" >> ${sjmname}
     echo -e "/usr/bin/perl /public/home/Songlab/xial/scripts/pipeline_songyl/editing_call_pipeline/snp_caller2_sanger.pl $pilename > $candname;" >> ${sjmname} ###### CHANGE SNP CALLER PARAMETERS!!!!!!!!!!!!
 
-    echo -e "/usr/bin/perl /public/home/Songlab/xial/scripts/pipeline_songyl/editing_call_pipeline/Compare_DARNED.pl $candname /public/home/Songlab/xial/Work/database/dbSNP151_SNV.site.txt $candname.snp1;" >> ${sjmname}
+    echo -e "/usr/bin/perl /public/home/Songlab/xial/scripts/pipeline_songyl/editing_call_pipeline/Compare_DARNED.pl $candname /public/home/Songlab/xial/Work/database/hg19/dbSNP151_SNV.site.txt $candname.snp1;" >> ${sjmname}
     echo -e "/usr/bin/perl /public/home/Songlab/xial/scripts/pipeline_songyl/editing_call_pipeline/Compare_DARNED.pl $candname.snp1 /public/home/Songlab/songyl/database/hg19_1000genomes_newSNPCalls.txt $candname.snp2;" >> ${sjmname}
     echo -e "/usr/bin/perl /public/home/Songlab/xial/scripts/pipeline_songyl/editing_call_pipeline/Compare_DARNED.pl $candname.snp2 /public/home/Songlab/songyl/database/UWash_variants.txt $candname.snp3;" >> ${sjmname}
     echo -e "awk -v OFS='\t' '{print \$1,\$2-1,\$2,\$3\"@\"\$4\"@\"\$5\"@\"\$6}' $candname.snp3 > $candname.snp3.tmp;" >> ${sjmname}

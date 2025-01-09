@@ -12,13 +12,17 @@ for FASTQ in ${filepath}/*.fastq; do
     # basic file names
     fastqname=`basename ${FASTQ} | cut -d. -f1`
     foldername=${filepath}"/starsplice_"${fastqname}
+    if [[ -d ${foldername} ]]; then rm -r ${foldername}; fi
     if [[ ! -d ${foldername} ]]; then mkdir ${foldername}; fi 
     if [[ ! -d ${foldername}/logs_site01 ]]; then 
         mkdir ${foldername}/logs_site01
     else
         rm ${foldername}/logs_site01/*
     fi
-    if [[ ! -f $foldername"/splitfastq_aa" ]]; then qsub -cwd -b y -sync y split -l 50000000 $newfile $foldername/splitfastq_; fi
+    if [[ ! -f $foldername"/splitfastq_aa" ]]; then 
+        #qsub -cwd -b y -sync y split -l 50000000 $newfile $foldername/splitfastq # not to split FASTQ_
+        ln -s ${FASTQ} $foldername"/splitfastq_aa"
+    fi
 }
 done
 

@@ -43,6 +43,7 @@ if (FUNCTION == "percent_single") {
 
     library(patchwork)
     library(RColorBrewer)
+    library(stringr)
     sample_names <- args[2]
     sample_order <- strsplit(sample_names, ",")[[1]]
     outFile <- args[3]
@@ -56,19 +57,23 @@ if (FUNCTION == "percent_single") {
         C2T_ratio <- data_alu[data_alu$TYPE == 'C->T', 'PERCENT']
         G2A_ratio <- data_alu[data_alu$TYPE == 'G->A', 'PERCENT']
         A2G_T2C_ratio <- sum(data_alu[data_alu$TYPE %in% c('A->G', 'T->C'), 'PERCENT'])
-        label <- paste(SUM, expression('\n'), A2G_ratio, expression('\n'), T2C_ratio, expression('\n'), C2T_ratio, expression('\n'), G2A_ratio, expression('\n'), A2G_T2C_ratio)
+        label <- paste(SUM, expression('\n'), A2G_ratio, expression('\n'), T2C_ratio, expression('\n'), A2G_T2C_ratio)# C2T_ratio, expression('\n'), G2A_ratio, expression('\n'), )
         labels <- c(labels, label)
         data_alu_other <- data.frame(TYPE='other', COUNT=sum(data_alu[!data_alu$TYPE %in% c('A->G', 'T->C', 'C->T', 'G->A'), ]$COUNT), PERCENT=sum(data_alu[!data_alu$TYPE %in% c('A->G', 'T->C', 'C->T', 'G->A'), ]$PERCENT))
         data_alu <- rbind(data_alu, data_alu_other)
         data_alu <- data_alu[data_alu$TYPE %in% c('A->G', 'T->C', 'C->T', 'G->A', 'other'), ]
         data_alu$sample <- rep(SAMPLE, length(data_alu$TYPE)); data_alu$rep <- rep('Alu', length(data_alu$TYPE))
         type.plot <- rbind(type.plot, data_alu)
-        data_rep <- read.table(paste(SAMPLE, 'NoAlu_rep.edit_type.txt', sep='.'), header=TRUE, sep='\t')
-        data_rep$sample <- rep(SAMPLE, length(data_rep$TYPE)); data_rep$rep <- rep('NoAlu_rep', length(data_rep$TYPE))
-        type.plot <- rbind(type.plot, data_rep)
-        data_other <- read.table(paste(SAMPLE, 'other.edit_type.txt', sep='.'), header=TRUE, sep='\t')
-        data_other$sample <- rep(SAMPLE, length(data_other$TYPE)); data_other$rep <- rep('other', length(data_other$TYPE))
-        type.plot <- rbind(type.plot, data_other)
+        if (file.exists(paste(SAMPLE, 'NoAlu_rep.edit_type.txt', sep='.'))){
+            data_rep <- read.table(paste(SAMPLE, 'NoAlu_rep.edit_type.txt', sep='.'), header=TRUE, sep='\t')
+            data_rep$sample <- rep(SAMPLE, length(data_rep$TYPE)); data_rep$rep <- rep('Repetitive_nonAlu', length(data_rep$TYPE))
+            type.plot <- rbind(type.plot, data_rep)
+        }
+        if (file.exists(paste(SAMPLE, 'other.edit_type.txt', sep='.'))){
+            data_other <- read.table(paste(SAMPLE, 'other.edit_type.txt', sep='.'), header=TRUE, sep='\t')
+            data_other$sample <- rep(SAMPLE, length(data_other$TYPE)); data_other$rep <- rep('Nonrepetitive', length(data_other$TYPE))
+            type.plot <- rbind(type.plot, data_other)
+        }
     }
     count_text <- data.frame(sample=strsplit(sample_names, ",")[[1]], LABEL=labels, Y=rep(0.8, length(labels)))
     alu.plot <- type.plot[type.plot$rep == 'Alu', ]
@@ -78,19 +83,25 @@ if (FUNCTION == "percent_single") {
     colnames(rep.plot.sum) <- c('sample', 'TYPE', 'Sum')
     rep.plot <- dplyr::left_join(rep.plot, rep.plot.sum, by='sample')
     rep.plot$PERCENT <- rep.plot$COUNT/rep.plot$Sum
-    rep.plot$rep <- factor(rep.plot$rep, levels=c('other', 'NoAlu_rep', 'Alu'))
+    rep.plot$rep <- factor(rep.plot$rep, levels=c('Nonrepetitive', 'Repetitive_nonAlu', 'Alu'))
     
     alu.plot$sample <- factor(alu.plot$sample, levels=sample_order)
     p.type <- ggplot() + geom_bar(alu.plot, mapping=aes(x=sample, y=PERCENT, fill=TYPE), stat='identity', width=0.8) + scale_y_continuous(expand = expansion(mult = c(0,0))) +
-        egg::theme_article() + scale_fill_manual(values=c('#D3D3D3', '#87CEFA', '#6495ED', '#FFDAB9', '#FF7F50')) + 
-        theme(axis.text.x=element_text(size=15, angle=90), axis.text.y=element_text(size=15), axis.title.x=element_text(size=18), axis.title.y=element_text(size=18), legend.title=element_blank(), legend.text=element_text(size=12)) +
-        geom_text(count_text, mapping=aes(x=sample, y=Y, label=LABEL), size=4)
-    rep.plot$sample <- factor(rep.plot$sample, levels=sample_order)
-    p.rep <- ggplot(rep.plot, aes(x=sample, y=PERCENT)) + geom_bar(aes(fill=rep), stat='identity', width=0.8) + scale_y_continuous(expand = expansion(mult = c(0,0))) +
-        egg::theme_article() + scale_fill_manual(values=c('#8DD3C7', '#FFFFB3', '#BEBADA')) + 
-        theme(axis.text.x=element_text(size=15, angle=90), axis.text.y=element_text(size=15), axis.title.x=element_text(size=18), axis.title.y=element_text(size=18), legend.title=element_blank(), legend.text=element_text(size=12))
-    p.type_rep <- p.type + p.rep
-    ggsave(outFile, p.type_rep, width=25, height=8)
+        egg::theme_article() + scale_fill_manual(values=c('#D3D3D3', '#87CEFA', '#6495ED', '#FFDAB9', '#FF7F50')) +
+        scale_x_discrete(labels = function(x) str_wrap(x, width = 30)) + 
+        theme(axis.text.x=element_text(size=25, angle=90), axis.text.y=element_text(size=25), axis.title.x=element_blank(), axis.title.y=element_text(size=30), legend.title=element_blank(), legend.text=element_text(size=25), axis.ticks.length=unit(3,'mm'), panel.border=element_rect(color='black', size=2)) # +
+        # geom_text(count_text, mapping=aes(x=sample, y=Y, label=LABEL), size=7)
+    if (file.exists(paste(SAMPLE, 'other.edit_type.txt', sep='.'))){
+        rep.plot$sample <- factor(rep.plot$sample, levels=sample_order)
+        p.rep <- ggplot(rep.plot, aes(x=sample, y=PERCENT)) + geom_bar(aes(fill=rep), stat='identity', width=0.8) + scale_y_continuous(expand = expansion(mult = c(0,0))) +
+            egg::theme_article() + scale_fill_manual(values=c('#8DD3C7', '#FFFFB3', '#BEBADA')) + scale_x_discrete(labels = function(x) str_wrap(x, width = 30)) +
+            theme(axis.text.x=element_text(size=25, angle=90), axis.text.y=element_text(size=25), axis.title.x=element_blank(), axis.title.y=element_text(size=30), legend.title=element_blank(), legend.text=element_text(size=25), axis.ticks.length=unit(3,'mm'), panel.border=element_rect(color='black', size=2))
+        p.type_rep <- p.type + p.rep
+        ggsave(outFile, p.type_rep, width=20, height=8)
+    } else {
+        p.type <- p.type + theme(axis.text.x=element_blank(), axis.title.x=element_blank())
+        ggsave(outFile, p.type, width=6, height=8)
+    }
 
 } else if (FUNCTION == 'depth') {
     depth <- read.table(args[2], header=F, sep='\t') # counted output of samtool depth for single individual, cmd: awk '{print $NF}' ${depth_out} | sort -k1,1n | uniq -c | awk -v OFS='\t' '{print $2,$1}'
